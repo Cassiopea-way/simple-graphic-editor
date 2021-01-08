@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Это заголовок тайтл</title>
+		<meta name="viewport" content="width=device-width,initial-scale=1.0">
+        <link rel = "stylesheet" href = "style.css">		
+	</head>
+	<style>
+	   #canvas{
+	           background-color:white;
+			   margin:100px 100px;}
+	   #system{width:800px;
+	           height:600px;
+			   background-color:grey;
+			   margin:0px auto;
+			   position:relative;}
+	   #draw{position:absolute;
+	                top:15px;
+			        left:100px;}
+	   #paint {position:absolute;
+	                top:15px;
+			        left:210px;}
+       #buttonbeze {position:absolute;
+	                top:50px;
+			        left:100px;}
+       #buttonugol1 {position:absolute;
+	            top:50px;
+			    left:230px;}
+       #buttonclear {position:absolute;
+	            top:15px;
+			    left:310px;}
+	   #getColor {position:absolute;
+	              top:15px;
+			      left:440px;}
+	   #divColor {position:absolute;
+	              top:15px;
+			      left:560px;
+				  width:50px;
+				  height:20px;
+				  border:1px solid black;}			  
+       #buttonturn {position:absolute;
+	            top:50px;
+			    left:380px;}
+       #buttonscale {position:absolute;
+	            top:50px;
+			    left:460px;}
+	   #selectcolor{position:absolute;
+	            top:50px;
+			    left:560px;}
+       #buttonreflection {position:absolute;
+	            top:50px;
+			    left:610px;}				
+    </style>
+	<body>
+	   <header>
+	      {{menu}}
+	   </header>
+	   <div id = "system">
+	    <canvas id="canvas" width="600" height="400"></canvas>
+		<button id = "draw">Нарисовать</button>
+		<button id = "paint">Закрасить</button>
+		<button id = "buttonbeze">Кривая Безье</button>
+		<button id = "buttonugol1">Многоугольник</button>
+		<button id = "buttonclear">Очистить холст</button>
+		<button id = "getColor">Выбрать цвет</button>
+		<!--<div id = "divColor"></div>-->
+		<button id = "buttonturn">Поворот</button>
+		<button id = "buttonscale">Масштабирование</button>
+		<!--<select name = "selectcolor" id = "selectcolor">
+		   <option></option>
+		   <option></option>
+		   <option></option>
+		</select>-->
+		<button id = "buttonreflection">Отражение</button>
+	   </div>
+	   <footer>
+		   {{footer}}
+		</footer>
+		<img src = "cat.jpg">
+	</body>
+	<script src = "script.js"></script>
+	<script>
+	   var canvas = document.getElementById("canvas");
+       var ctx = canvas.getContext("2d");
+	   var draw = document.getElementById("draw");
+	   var paint = document.getElementById("paint");
+	   var buttonbeze = document.getElementById("buttonbeze");
+	   var buttonugol1 = document.getElementById("buttonugol1");
+	   var buttonugol2 = document.getElementById("buttonugol2");
+	   var buttonturn = document.getElementById("buttonturn");
+	   var buttonscale = document.getElementById("buttonscale");
+	   var buttonreflection = document.getElementById("buttonreflection");
+	   var divColor = document.getElementById("divColor");
+	   var rect_width = canvas.width;
+	   var rect_height = canvas.height;
+	   var masslength = 0;
+	   
+	 var plot = function(x, y) { //кисточка - ставит пиксель своего цвета
+    if(isFinite(x) && isFinite(y)){
+        setPixel(x,y, plot.color);
+    }
+};
+
+     function setPixel (x,y,c) { //ставит пиксель цвета с
+    var p=ctx.createImageData(1,1);
+    p.data[0]=c.r;
+    p.data[1]=c.g;
+    p.data[2]=c.b;
+    p.data[3]=c.a;
+    var data = ctx.getImageData(x, y, 1,1).data;
+    if(data[3] <= p.data[3]) //сравниваем прозрачность
+        ctx.putImageData(p,x,y);
+}
+	 
+	 // i - номер вершины, n - количество вершин, t - положение кривой (от 0 до 1)
+       function getBezierBasis(i, n, t) {
+	   // Факториал
+	   function f(n) {
+		return (n <= 1) ? 1 : n * f(n - 1);
+	   };
+	
+	   // считаем i-й элемент полинома Берштейна
+	   return (f(n)/(f(i)*f(n - i)))* Math.pow(t, i)*Math.pow(1 - t, n - i);
+       }
+	   
+	   // arr - массив опорных точек. Точка - двухэлементный массив, (x = arr[0], y = arr[1])
+       // step - шаг при расчете кривой (0 < step < 1), по умолчанию 0.01
+       function getBezierCurve(arr, step) {
+	   if (step == undefined) {
+		   step = 0.01;
+	   }
+	
+	   var res = new Array()
+	
+	   for (var t = 0; t < 1 + step; t += step) {
+		  if (t > 1) {
+			 t = 1;
+		  }
+		
+		var ind = res.length;
+		
+		res[ind] = new Array(0, 0);
+		
+		for (var i = 0; i < arr.length; i++) {
+			var b = getBezierBasis(i, arr.length - 1, t);
+			
+			res[ind][0] += arr[i][0] * b;
+			res[ind][1] += arr[i][1] * b;
+		 }
+	  }
+	
+	  return res;
+      }
+	  
+	  
+	  function drawLines(ctx, arr, delay, pause, color) {
+	  if(color)  {
+        plot.color = color;
+      } else {
+        plot.color = {r:0,g:0,b:0,a:255}; //цвет по умолчанию - черный
+      }
+	   if (delay == undefined) {
+		 delay = 10;
+	   }
+	
+	  if (pause == undefined) {
+		   pause = delay;
+	  }
+	   var i = 0;
+	
+	  function delayDraw() {
+		  if (i >= arr.length - 1) {
+			 return;
+		  }
+		 
+		  ctx.moveTo(arr[i][0],arr[i][1]);
+		  ctx.lineTo(arr[i+1][0],arr[i+1][1]);
+		  ctx.stroke();
+	
+		  ++i;
+		
+		  setTimeout(delayDraw, delay);
+	  }
+	
+	  setTimeout(delayDraw, pause);
+     }
+	 
+	 function drawLine(x1, y1, x2, y2, color) {// функция для построения прямой
+    if(color)  {
+        plot.color = color;
+    } else {
+        plot.color = {r:0,g:0,b:0,a:255}; //цвет по умолчанию - черный
+    }
+    var deltaX = Math.abs(x2 - x1);
+    var deltaY = Math.abs(y2 - y1);
+    var signX = x1 < x2 ? 1 : -1;
+    var signY = y1 < y2 ? 1 : -1;
+    //
+    var error = deltaX - deltaY;
+    //
+    plot(x2, y2);
+    while(x1 != x2 || y1 != y2) 
+   {
+        plot(x1, y1);
+        var error2 = error * 2;
+        //
+        if(error2 > -deltaY) 
+        {
+            error -= deltaY;
+            x1 += signX;
+        }
+        if(error2 < deltaX) 
+        {
+            error += deltaX;
+            y1 += signY;
+        }
+    }
+}
+
+function fill(x, y, color){ // Функция заливки многоугольника цветом color
+    var startColor = ctx.getImageData(x, y, 1,1).data;
+    plot.color = color;
+    var q = [[x,y]];
+    for(var i = 0; i!= q.length; i++){
+        var x = q[i][0], y = q[i][1];
+        var data = ctx.getImageData(x, y, 1,1).data;
+        if(x>=0 && y>=0 && x<rect_width && y<rect_height && data[0]==startColor[0] && data[1]==startColor[1] && data[2]==startColor[2] && data[3]==startColor[3]){
+            plot(x, y, 1);
+            var s = q.length;
+            q[s] = [x+1, y];
+            q[s+1] = [x-1, y];
+            q[s+2] = [x, y+1];
+            q[s+3] = [x, y-1];
+        }
+    }
+}
+
+// Поворачиваем точку t(x,y) на угол (deg) относительно точки t0(x,y)
+function rotateOnDegree(mas,massturn,deg) {
+ 
+    // Переводим угол поворота из градусов в радианы
+    var rad = (Math.PI / 180) * deg;
+ 
+    // И рассчитываем координаты новой точки по формуле
+	for (var i = 0; i < massturn.length; i++){
+    massturn[i,0] = mas[0] + (massturn[i,0] - mas[0]) * Math.cos(rad) - (massturn[i,1] - mas[1]) * Math.sin(rad);
+    massturn[i,1] = mas[1] + (massturn[i,0] - mas[0]) * Math.sin(rad) + (massturn[i,1] - mas[1]) * Math.cos(rad);
+    }
+}
+
+function getAreaCenter(coordsArray) {
+        var center = [];
+        var coord,
+            minX = maxX = parseInt(coordsArray[0], 10),
+            minY = maxY = parseInt(coordsArray[1], 10);
+        for (var i = 0, l = coordsArray.length; i < l; i++) {
+            coord = parseInt(coordsArray[i], 10);
+            if (i%2 == 0) {
+                if (coord < minX) {
+                    minX = coord;
+                } else if (coord > maxX) {
+                    maxX = coord;
+                }
+            } else {
+                if (coord < minY) {
+                    minY = coord;
+                } else if (coord > maxY) {
+                    maxY = coord;
+                }
+            }
+        }
+        center = [parseInt((minX + maxX) / 2, 10), parseInt((minY + maxY) / 2, 10)];
+		
+    return(center);
+	
+}
+
+function convertToSimpleArray(array)// преобразование многомерного массива в одномерный
+{
+var res=[];
+for (var i=0; i<array.length; i++)
+if (!Array.isArray(array[i]))
+   res.push(array[i]);
+else
+   res=res.concat(convertToSimpleArray(array[i]));
+return res;
+} 
+	 
+	 // Создание двумерного массива
+	 /*function createArray(n,m) {
+       var mas = [];
+       for (var i = 0; i < m; i++){
+       mas[i] = [];
+       for (var j = 0; j < n; j++){
+        mas[i][j] = 0;
+       }}
+	   return mas;
+       }*/
+	 
+     var massbezier = [];
+	 var massugolok1 = [];
+	 var masspaint = [];
+	 var massreflection = [];
+	 var massturnon = [];
+	 var masscolor = [0,0,0,255];
+	 getColor.onclick = function(color){
+	    alert('Введите цвет в формате RGBA от 0 до 255');
+	    masscolor[0] = prompt('Красный');
+		masscolor[1] = prompt('Зелёный');
+		masscolor[2] = prompt('Синий');
+		masscolor[3] = prompt('Прозрачность');
+		if(color)  {
+        plot.color = color;
+        } else {
+        plot.color = {r:masscolor[0],g:masscolor[1],b:masscolor[2],a:masscolor[3]}; //цвет по умолчанию - черный
+        }
+		divColor.style.backgroundColor = color;
+	 }
+	 buttonclear.onclick = function(){
+	    ctx.clearRect(0,0,rect_width,rect_height);
+	    var massbezier = [];
+	    var massugolok1 = [];
+	    var masspaint = [];
+	    var massreflection = [];
+	    var massturnon = [];
+	 }
+	 buttonbeze.onclick = function(){
+	 alert('Выберите точки на холсте для кривой');
+     canvas.onclick = function(e){
+		e = e || window.event;
+		var rect = this.getBoundingClientRect();
+		x = e.clientX - rect.left;
+		y = e.clientY - rect.top;
+		massbezier.push(x,y);
+		alert(massbezier);
+		console.log(massbezier);
+	 }	 
+	 }
+	 draw.onclick = function(){
+	   if (massbezier.length != 0){
+	      var massbeziertwo = massbezier.map((_,i,a) => a.slice(i*2,i*2 + 2)).filter((el) => el.length);
+		  ctx.fillStyle = "008000";
+		  ctx.lineWidth = 0.1;
+		  var massbezierready = getBezierCurve(massbeziertwo,0.01);
+		  drawLines(ctx,massbezierready,10,{r:masscolor[0],g:masscolor[1],b:masscolor[2],a:masscolor[3]});
+		  }
+	   if (massugolok1.length != 0){
+	      var massugolok1two = massugolok1.map((_,i,a) => a.slice(i*2,i*2 + 2)).filter((el) => el.length);
+		  ctx.fillStyle = "008000";
+		  ctx.lineWidth = 0.1;
+		  for (var i = 0;i < massugolok1two.length - 1; i++){
+		  drawLine(massugolok1two[i][0],massugolok1two[i][1],massugolok1two[i+1][0],massugolok1two[i+1][1],{r:masscolor[0],g:masscolor[1],b:masscolor[2],a:masscolor[3]});
+		  if (i == massugolok1two.length){
+		    break;
+		  }
+		  }
+		  drawLine(massugolok1two[massugolok1two.length - 1][0],massugolok1two[massugolok1two.length - 1][1],massugolok1two[0][0],massugolok1two[0][1],{r:masscolor[0],g:masscolor[1],b:masscolor[2],a:masscolor[3]});
+		  console.log(massugolok1two);
+	   }
+	   }
+	   buttonugol1.onclick = function(){
+	   alert('Выберите точки на холсте для прямой');
+       canvas.onclick = function(e){
+		e = e || window.event;
+		var rect = this.getBoundingClientRect();
+		x = e.clientX - rect.left;
+		y = e.clientY - rect.top;
+		massugolok1.push(x,y);
+		alert(massugolok1);
+	 }	 
+	 }
+	 paint.onclick = function(){
+	    alert('Выберите область для закрашивания на холсте');
+		canvas.onclick = function(e){
+		e = e || window.event;
+		var rect = this.getBoundingClientRect();
+		x = e.clientX - rect.left;
+		y = e.clientY - rect.top;
+		masspaint.push(x,y);
+		fill(x,y,{r:masscolor[0],g:masscolor[1],b:masscolor[2],a:masscolor[3]});
+		console.log(x,y);
+	 }
+	 }
+	 buttonreflection.onclick = function(){
+	   alert('Выберите точку на фигуре для отражения');
+       canvas.onclick = function(e){
+		e = e || window.event;
+		var rect = this.getBoundingClientRect();
+		x = e.clientX - rect.left;
+		y = e.clientY - rect.top;
+		massreflection.push(x,y);
+		alert(massreflection);
+		var massreflect = [];
+		if (massugolok1.length != 0){
+		var massugolok1two = massugolok1.map((_,i,a) => a.slice(i*2,i*2 + 2)).filter((el) => el.length);
+		ctx.clearRect(0,0,rect_width,rect_height);
+		for (var i = 0; i < massugolok1two.length; i++){
+		   if (massreflection[0] < massugolok1two[i][0]){
+		      massugolok1two[i][0] = massugolok1two[i][0] - 2*(massugolok1two[i][0] - massreflection[0]);
+		   } else {
+		      massugolok1two[i][0] = massugolok1two[i][0] + 2*(Math.abs((massugolok1two[i][0] - massreflection[0])));
+		   }  
+		}
+		for (var i = 0;i < massugolok1two.length - 1; i++){
+		  drawLine(massugolok1two[i][0],massugolok1two[i][1],massugolok1two[i+1][0],massugolok1two[i+1][1],{r:masscolor[0],g:masscolor[1],b:masscolor[2],a:masscolor[3]});
+		  if (i == massugolok1two.length){
+		    break;
+		  }
+		  }
+		  drawLine(massugolok1two[massugolok1two.length - 1][0],massugolok1two[massugolok1two.length - 1][1],massugolok1two[0][0],massugolok1two[0][1],{r:masscolor[0],g:masscolor[1],b:masscolor[2],a:masscolor[3]});
+		  massugolok1 = convertToSimpleArray(massugolok1two);
+		  console.log(massugolok1two);
+		  }
+		  if (massbezier.length != 0){
+		  var massbeziertwo = massbezier.map((_,i,a) => a.slice(i*2,i*2 + 2)).filter((el) => el.length);
+		  for (var i = 0; i < massbeziertwo.length; i++){
+		      if (massreflection[0] < massbeziertwo[i][0]){
+		      massbeziertwo[i][0] = massbeziertwo[i][0] - 2*(massbeziertwo[i][0] - massreflection[0]);
+		   } else {
+		      massbeziertwo[i][0] = massbeziertwo[i][0] + 2*(Math.abs((massbeziertwo[i][0] - massreflection[0])));
+		   }
+		   }
+		  ctx.clearRect(0,0,canvas.width,canvas.height);
+		  ctx.fillStyle = "008000";
+		  ctx.lineWidth = 0.1;
+		  var massbezierready = getBezierCurve(massbeziertwo,0.01);
+		  drawLines(ctx,massbezierready,10);
+		  massbezier = convertToSimpleArray(massbeziertwo);
+		  }
+	 }  
+	 }
+	 buttonturn.onclick = function(){
+	   alert('Выберите точку на фигуре относительно которой сделать поворот');
+       canvas.onclick = function(e){
+		e = e || window.event;
+		var rect = this.getBoundingClientRect();
+		x = e.clientX - rect.left;
+		y = e.clientY - rect.top;
+		massturnon.push(x,y);
+		alert(massturnon);
+		var nook = prompt('Введите угол поворота');
+		var rad = (Math.PI / 180) * nook;
+		if (massugolok1.length != 0){
+		var massugolok1two = massugolok1.map((_,i,a) => a.slice(i*2,i*2 + 2)).filter((el) => el.length);
+		ctx.clearRect(0,0,rect_width,rect_height);
+		  for (var i = 0; i < massugolok1two.length; i++){
+		   massugolok1two[i][0] = Math.ceil(massturnon[0] + (massugolok1two[i][0] - massturnon[0]) * Math.cos(rad) - (massturnon[1] - massugolok1two[i][1]) * Math.sin(rad));
+		   massugolok1two[i][1] = Math.ceil(massturnon[1] + (massugolok1two[i][0] - massturnon[0]) * Math.sin(rad) + (massugolok1two[i][1] - massturnon[1]) * Math.cos(rad));
+		   }
+           console.log(massugolok1two);
+           for (var i = 0;i < massugolok1two.length - 1; i++){
+		  drawLine(massugolok1two[i][0],massugolok1two[i][1],massugolok1two[i+1][0],massugolok1two[i+1][1],{r:masscolor[0],g:masscolor[1],b:masscolor[2],a:masscolor[3]});
+		  if (i == massugolok1two.length){
+		    break;
+		  }
+		  }
+		  drawLine(massugolok1two[massugolok1two.length - 1][0],massugolok1two[massugolok1two.length - 1][1],massugolok1two[0][0],massugolok1two[0][1],{r:masscolor[0],g:masscolor[1],b:masscolor[2],a:masscolor[3]});
+          massugolok1 = convertToSimpleArray(massugolok1two);
+          }
+		  if (massbezier.length != 0){
+		  var massbeziertwo = massbezier.map((_,i,a) => a.slice(i*2,i*2 + 2)).filter((el) => el.length);
+		  ctx.clearRect(0,0,rect_width,rect_height);
+		  for (var i = 0; i < massbeziertwo.length; i++){
+		     massbeziertwo[i][0] = Math.ceil(massturnon[0] + (massbeziertwo[i][0] - massturnon[0]) * Math.cos(rad) - (massturnon[1] - massbeziertwo[i][1]) * Math.sin(rad));
+		     massbeziertwo[i][1] = Math.ceil(massturnon[1] + (massbeziertwo[i][0] - massturnon[0]) * Math.sin(rad) + (massbeziertwo[i][1] - massturnon[1]) * Math.cos(rad));
+		   }
+		  ctx.fillStyle = "008000";
+		  ctx.lineWidth = 0.1;
+		  var massbezierready = getBezierCurve(massbeziertwo,0.01);
+		  drawLines(ctx,massbezierready,10);
+		  massbezier = convertToSimpleArray(massbeziertwo);
+		  }
+		}
+		}
+		buttonscale.onclick = function(){
+		   var scaleY = prompt('Введите коэффициент масштабирования');
+		   var center = getAreaCenter(massugolok1);
+		   var massugolok1two = massugolok1.map((_,i,a) => a.slice(i*2,i*2 + 2)).filter((el) => el.length);
+		   ctx.clearRect(0,0,rect_width,rect_height);
+           for (var i = 0; i < massugolok1two.length; i++){
+		   if (scaleY > 1){
+		     if (massugolok1two[i][1] > center[1]){
+			     massugolok1two[i][1] = Math.ceil(scaleY*(massugolok1two[i][1] - center[1]) + center[1]);
+			  } else {
+			     massugolok1two[i][1] = Math.ceil(massugolok1two[i][1]/scaleY);
+			  }
+		   } else {
+		        if (massugolok1two[i][1] > center[1]){
+			     massugolok1two[i][1] = Math.ceil(scaleY*(massugolok1two[i][1] - center[1]) + center[1]);
+			  } else {
+			     massugolok1two[i][1] = Math.ceil(center[1] - scaleY*(center[1] - massugolok1two[i][1]));
+			  }
+		   }
+		   }
+		   for (var i = 0;i < massugolok1two.length - 1; i++){
+		  drawLine(massugolok1two[i][0],massugolok1two[i][1],massugolok1two[i+1][0],massugolok1two[i+1][1],{r:masscolor[0],g:masscolor[1],b:masscolor[2],a:masscolor[3]});
+		  if (i == massugolok1two.length){
+		    break;
+		  }
+		  }
+		  drawLine(massugolok1two[massugolok1two.length - 1][0],massugolok1two[massugolok1two.length - 1][1],massugolok1two[0][0],massugolok1two[0][1],{r:masscolor[0],g:masscolor[1],b:masscolor[2],a:masscolor[3]});
+		  massugolok1 = convertToSimpleArray(massugolok1two);
+		  console.log(massugolok1);
+		}
+	 var matrix = Array(3).fill(null).map(() => Array(3).fill(0));
+	 console.log(matrix);
+    </script>
+</html>
